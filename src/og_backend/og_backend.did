@@ -1,0 +1,8 @@
+service : {
+  "register_collection": (principal) -> (text);
+  "unregister_collection": (nat64) -> (text);
+  "fetch_collections": () -> (text);
+  "fetch_collection": (nat64) -> (text);
+  "fetch_graphics": (nat64) -> (text);
+  "fetch_graphic": (nat64) -> (text);
+}

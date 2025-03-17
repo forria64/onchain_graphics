@@ -1,0 +1,28 @@
+{
+  "collection": {
+    "title": "StefanB portofolio",
+    "description": "StefanB portofolio",
+    "artist": "StefanB",
+    "external_link": "https://stefanb.art"
+  },
+  "graphics": [
+    {
+      "title": "20211",
+      "description": "Attention .mixed media on canvas .20cm .118 MB .9331x9344 pixels",
+      "asset": "/artwork/paintings/2021/20211.webp",
+      "asset_hash": "d103bdf233d32e364fd3d33785205760ef70e72512160db9e2c7a23a7370d13e"
+    },
+    {
+      "title": "20212",
+      "description": "Atypical Night in Costinesti .mixed media on canvas .20x40 cm .233 MB .13943x6674 pixels",
+      "asset": "/artwork/paintings/2021/20212.webp",
+      "asset_hash": "2812273e89a929f91149e59639de93b2ebd0896295e55c7d1f22388f201dafda"
+    },
+    {
+      "title": "20213",
+      "description": "Avalus B .mixed media on canvas .40cm .125 MB .9360x9381 pixels",
+      "asset": "/artwork/paintings/2021/20213.webp",
+      "asset_hash": "3cbf0f72a1b93bf6428c2611b562b5e30f6cd687893e927a4ee7f7265b1a6968"
+    }
+  ]
+}

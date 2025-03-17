@@ -1,0 +1,5 @@
+[workspace]
+members = [
+    "src/og_backend"
+]
+resolver = "2"
