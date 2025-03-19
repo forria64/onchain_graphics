@@ -1,3 +1,4 @@
+<!-- File: src/og_frontend/src/components/Header.vue -->
 <template>
   <header class="header">
     <div class="header-left">
@@ -83,14 +84,30 @@ export default {
   text-decoration: none;
   color: #afaca9;
   font-size: 1rem;
+  transition: color 0.3s ease, background 0.3s ease;
+}
+
+/* Hover effect: animated gradient instead of underline */
+.menu-link:hover {
+  color: transparent;
+  background: linear-gradient(90deg, #09f95a, #bab41c, #f9a207, #ff2217, #fa0e8c, #773ac9, #0861f2, #0aabaa);
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: gradientLoop 2s linear infinite alternate;
+  background-size: 200% auto;
 }
 
 .menu-link.router-link-active {
   color: #0b0a0a;
 }
 
-.menu-link:hover {
-  text-decoration: underline;
+@keyframes gradientLoop {
+  0% {
+    background-position: 0% center;
+  }
+  100% {
+    background-position: 100% center;
+  }
 }
 </style>
 

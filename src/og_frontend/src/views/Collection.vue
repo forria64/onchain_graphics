@@ -1,162 +1,184 @@
 <template>
   <div class="work">
-    <!-- Global header always visible -->
+    <!-- Static header: displays "Work > [collection title]" -->
     <div class="work-header">
-      <div class="work-title">Work</div>
-      <div class="sort-buttons">
-        <button
-          :class="{ active: sortType === 'alphabetical' }"
-          @click="sortAlphabetically"
+      <div class="work-title">
+        <span class="work-prefix clickable" @click="goBackToWork">Work</span>
+        <span class="separator"> > </span>
+        <span
+          class="collection-title-text"
+          :class="{ 'gradient-text': loading, 'standard-text': !loading }"
         >
-          Sort A–Z
-        </button>
-        <button
-          :class="{ active: sortType === 'chronological' }"
-          @click="sortChronologically"
-        >
-          Sort Recent
-        </button>
+          {{ collection.title || '' }}
+        </span>
       </div>
     </div>
 
     <!-- Fixed gradient divider -->
     <div class="fixed-divider"></div>
 
-    <!-- Scrollable grid container -->
+    <!-- Grid container for collection graphics -->
     <div class="grid-container">
-      <!-- LOADING SCREEN -->
-      <div v-if="store.loading" class="loading-screen">
+      <div v-if="loading" class="loading-screen">
         LOADING...
       </div>
-
-      <!-- COLLECTION GRID -->
       <div v-else class="collections-grid">
+        <!-- 
+          Each graphic card now matches the style from Work.vue:
+          1) Title at the top
+          2) Optional fields in the middle (description)
+          3) Timestamps pinned at the bottom
+          4) All text center-aligned
+        -->
         <div
-          v-for="collection in store.collections"
-          :key="collection.id"
+          v-for="graphic in graphics"
+          :key="graphic.ogid"
           class="collection-card"
         >
           <div class="card-inner">
-            <!-- Artwork container clickable to navigate to Collection.vue -->
-            <div class="artwork-container" @click="goToCollection(collection.id)">
+            <div class="artwork-container">
               <div class="artwork-inner">
                 <img
-                  v-if="collection.imageUrl"
-                  :src="collection.imageUrl"
-                  alt="Artwork"
+                  v-if="graphic.imageUrl"
+                  :src="graphic.imageUrl"
+                  alt="Graphic Image"
                   class="artwork-image"
+                  @click="openModal(graphic.imageUrl)"
                 />
                 <div v-else class="spinner"></div>
               </div>
             </div>
 
-            <!-- Card layout with top, middle, bottom regions. -->
-            <div class="collection-details">
-              <!-- Always-present top -->
+            <!-- 
+              .graphic-details is now a flex column:
+              - .details-top pinned at top
+              - .details-middle grows to center optional fields
+              - .details-bottom pinned at bottom
+            -->
+            <div class="graphic-details">
+              <!-- Title always present at top -->
               <div class="details-top">
-                <div class="collection-title">
-                  {{ collection.title }}
+                <div class="graphic-title">
+                  {{ graphic.title }}
                 </div>
               </div>
 
               <!-- Optional fields in the middle -->
               <div class="details-middle">
-                              <div class="collection-artist" v-if="collection.artist">
-                  by {{ collection.artist }}
-                </div>
-                <div
-                  class="collection-description"
-                  v-if="collection.description"
-                >
-                  {{ collection.description }}
-                </div>
-
-                <div
-                  class="collection-external-link"
-                  v-if="collection.external_link"
-                >
-                  <a :href="collection.external_link" target="_blank">
-                    VISIT EXTERNAL LINK
-                  </a>
+                <div v-if="graphic.description" class="graphic-description">
+                  {{ graphic.description }}
                 </div>
               </div>
 
-              <!-- Timestamps pinned at bottom -->
+              <!-- Timestamps pinned to the bottom -->
               <div class="details-bottom">
-                <div class="collection-timestamp">
-                  Registered @ {{ collection.registration_timestamp }}
+                <div
+                  v-if="graphic.registration_timestamp"
+                  class="graphic-timestamp"
+                >
+                  Registered @ {{ graphic.registration_timestamp }}
                 </div>
-                <div class="collection-update" v-if="collection.update_timestamp">
-                  Last Updated @ {{ collection.update_timestamp }}
+                <div v-if="graphic.update_timestamp" class="graphic-update">
+                  Last Updated @ {{ graphic.update_timestamp }}
                 </div>
               </div>
             </div>
-            <!-- end .collection-details -->
+            <!-- end .graphic-details -->
           </div>
           <!-- end .card-inner -->
         </div>
         <!-- end .collection-card -->
 
+        <div v-if="!graphics.length" class="no-collections">
+          No graphics found in this collection.
+        </div>
       </div>
       <!-- end .collections-grid -->
     </div>
-    <!-- end .grid-container -->
+
+    <!-- Modal overlay for high-res artwork -->
+    <div v-if="modalVisible" class="modal-overlay" @click.self="closeModal">
+      <div class="modal-content">
+        <img :src="modalImage" alt="High Resolution Graphic" class="modal-image" />
+      </div>
+      <button class="modal-close" @click="closeModal">✕</button>
+    </div>
   </div>
 </template>
 
 <script>
-import { onMounted, onUnmounted, ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useWorkStore } from '@/store/workStore';
+import { ref, onMounted } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
+import {
+  fetchCollection,
+  fetchGraphics,
+  fetchGraphic,
+  retrieveAsset,
+} from '@/apiAgent.js';
 
 export default {
-  name: 'Work',
+  name: 'Collection',
   setup() {
+    const route = useRoute();
     const router = useRouter();
-    const store = useWorkStore();
-    const sortType = ref('chronological');
-    let timer = null;
+    const collectionId = route.params.id;
+    const collection = ref({});
+    const graphics = ref([]);
+    const loading = ref(true);
+    const modalVisible = ref(false);
+    const modalImage = ref('');
 
-    function sortAlphabetically() {
-      sortType.value = 'alphabetical';
-      store.collections.sort((a, b) => a.title.localeCompare(b.title));
-    }
-
-    function sortChronologically() {
-      sortType.value = 'chronological';
-      // Sort based solely on registration_timestamp (ignoring update_timestamp)
-      store.collections.sort(
-        (a, b) =>
-          new Date(b.registration_timestamp) - new Date(a.registration_timestamp)
-      );
-    }
-
-    function goToCollection(id) {
-      router.push({ name: 'Collection', params: { id } });
-    }
-
-    onMounted(async () => {
-      if (!store.collections.length) {
-        store.loading = true;
-        await store.loadCollections();
-        await store.updateArtwork();
-        store.loading = false;
+    async function loadCollectionData() {
+      try {
+        const details = await fetchCollection(Number(collectionId));
+        collection.value = details;
+        const graphicIds = await fetchGraphics(Number(collectionId));
+        const graphicPromises = graphicIds.map(async (ogid) => {
+          try {
+            const gDetails = await fetchGraphic(ogid);
+            const imageUrl = await retrieveAsset(ogid);
+            return { ...gDetails, imageUrl };
+          } catch (error) {
+            console.error('Error loading graphic', ogid, error);
+            return null;
+          }
+        });
+        const graphicResults = await Promise.all(graphicPromises);
+        graphics.value = graphicResults.filter((g) => g !== null);
+      } catch (error) {
+        console.error('Error loading collection data', error);
+      } finally {
+        loading.value = false;
       }
-      timer = setInterval(() => {
-        store.updateArtwork();
-      }, 3000);
-    });
+    }
 
-    onUnmounted(() => {
-      if (timer) clearInterval(timer);
+    function openModal(imageUrl) {
+      modalImage.value = imageUrl;
+      modalVisible.value = true;
+    }
+
+    function closeModal() {
+      modalVisible.value = false;
+      modalImage.value = '';
+    }
+
+    function goBackToWork() {
+      router.push({ name: 'Work' });
+    }
+
+    onMounted(() => {
+      loadCollectionData();
     });
 
     return {
-      store,
-      sortType,
-      sortAlphabetically,
-      sortChronologically,
-      goToCollection,
+      collection,
+      graphics,
+      loading,
+      modalVisible,
+      modalImage,
+      openModal,
+      closeModal,
+      goBackToWork,
     };
   },
 };
@@ -181,7 +203,6 @@ export default {
   height: 80px;
   background-color: #faf8ff;
   display: flex;
-  justify-content: space-between;
   align-items: center;
   padding: 1rem;
   z-index: 1100;
@@ -190,28 +211,39 @@ export default {
 .work-title {
   font-size: 2rem;
   font-weight: bold;
-  color: #0b0a0a;
+  color: #000000;
 }
 
-.sort-buttons {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.sort-buttons button {
-  background: transparent;
-  border: none;
-  font-size: 0.9rem;
+.work-prefix {
+  transition: all 0.3s ease;
   cursor: pointer;
-  color: #afaca9;
-  transition: color 0.3s ease, background 0.3s ease;
+  color: #000000;
+}
+.work-prefix:hover {
+  color: transparent;
+  background: linear-gradient(
+    90deg,
+    #09f95a,
+    #bab41c,
+    #f9a207,
+    #ff2217,
+    #fa0e8c,
+    #773ac9,
+    #0861f2,
+    #0aabaa
+  );
+  background-clip: text;
+  -webkit-background-clip: text;
+  animation: gradientLoop 2s linear infinite alternate;
+  background-size: 200% auto;
 }
 
-.sort-buttons button.active {
-  color: #0b0a0a;
+.separator,
+.collection-title-text.standard-text {
+  color: #000000;
 }
 
-.sort-buttons button:not(.active):hover {
+.collection-title-text.gradient-text {
   color: transparent;
   background: linear-gradient(
     90deg,
@@ -261,7 +293,6 @@ export default {
   z-index: 1150;
   pointer-events: none;
 }
-
 @keyframes gradientMove {
   0% {
     background-position: 0% 50%;
@@ -316,19 +347,16 @@ export default {
   gap: 1rem;
   padding: 1rem;
 }
-
 @media (max-width: 1200px) {
   .collections-grid {
     grid-template-columns: repeat(3, 1fr);
   }
 }
-
 @media (max-width: 768px) {
   .collections-grid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
-
 @media (max-width: 480px) {
   .collections-grid {
     grid-template-columns: 1fr;
@@ -355,7 +383,6 @@ export default {
   animation: gradientMove 3s linear infinite alternate;
   transition: padding 0.3s ease;
 }
-
 .collection-card:hover {
   padding: 5px;
 }
@@ -389,27 +416,23 @@ export default {
   justify-content: center;
   overflow: hidden;
 }
-
 .artwork-image {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
 }
 
-/*
-   .collection-details is flex with:
-   - details-top pinned at top
-   - details-middle (optional fields) centered
-   - details-bottom pinned at bottom
-   - all text center-aligned
+/* 
+   .graphic-details is flex with top, middle, and bottom regions
+   pinned in place. All text is center-aligned.
 */
-.collection-details {
+.graphic-details {
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: space-between; /* top & bottom pinned */
   margin-top: 0.5rem;
-  text-align: center; /* center-align everything */
+  text-align: center;
 }
 
 .details-top,
@@ -418,43 +441,83 @@ export default {
   margin: 0.25rem 0;
 }
 
-/* Middle region grows or shrinks to fill space */
 .details-middle {
-  display: flex;
   flex: 1;
-  flex-direction: column;
+  display: flex;
   justify-content: center;
   align-items: center;
+  flex-direction: column;
 }
 
-.collection-title {
-  font-size: 2rem;
+.graphic-title {
+  font-size: 1.2rem;
   font-weight: bold;
   color: #faf8ff;
 }
 
-.collection-description {
+.graphic-description {
   margin-top: 0.5rem;
   font-size: 0.9rem;
-  color: #faf8ff; /* Updated color */
+  color: #faf8ff; /* same as collection-description */
 }
 
-.collection-artist {
+.graphic-timestamp,
+.graphic-update {
   margin-top: 0.5rem;
-  font-size: 0.9rem;
-  color: #faf8ff; /* Updated color */
+  font-size: 0.8rem;
+  color: #afaca9;
 }
 
-.collection-external-link {
-  margin-top: 0.5rem;
+.no-collections {
+  grid-column: 1 / -1;
+  text-align: center;
+  padding: 2rem;
+  color: #0b0a0a;
 }
 
-.collection-external-link a {
-  color: #faf8ff;
-  text-decoration: none;
+/* 
+   Modal overlay for high-res image 
+*/
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.95);
+  z-index: 4000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  overflow: hidden;
 }
-
-.collection-external-link a:hover {
+.modal-content {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  padding: 100px;
+  box-sizing: border-box;
+}
+.modal-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+.modal-close {
+  position: fixed;
+  top: 30px;
+  right: 30px;
+  font-size: 3rem;
+  font-weight: bold;
+  color: #ffffff;
+  text-shadow: 0 0 10px #ffffff;
+  background: none;
+  border: none;
+  cursor: pointer;
+  transition: color 0.3s ease, text-shadow 0.3s ease, background 0.3s ease;
+}
+.modal-close:hover {
   color: transparent;
   text-shadow: none;
   background: linear-gradient(
@@ -474,13 +537,6 @@ export default {
   background-size: 200% auto;
 }
 
-.collection-timestamp,
-.collection-update {
-  margin-top: 0.5rem;
-  font-size: 0.8rem;
-  color: #afaca9;
-}
-
 .spinner {
   border: 4px solid #f3f3f3;
   border-top: 4px solid #0b0a0a;
@@ -490,7 +546,6 @@ export default {
   animation: spin 1s linear infinite;
   margin: auto;
 }
-
 @keyframes spin {
   0% {
     transform: rotate(0deg);
@@ -498,10 +553,6 @@ export default {
   100% {
     transform: rotate(360deg);
   }
-}
-
-.work-title span {
-  vertical-align: middle;
 }
 </style>
 

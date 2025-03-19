@@ -1,8 +1,8 @@
-// src/og_backend/src/lib.rs
+// File: src/og_backend/src/lib.rs
 
 mod auth;
 mod frontend_api;
-mod registry; // Our new auth module
+mod registry; // Now includes both auth and registry functions
 
 use candid::Principal;
 use ic_cdk::storage;
@@ -28,60 +28,43 @@ fn post_upgrade() {
 }
 
 /// Controller-only update call to register a new collection.
-/// Now returns a simple JSON ack on success, rather than the entire state.
 #[update]
 async fn register_collection(canister_id: Principal) -> String {
-    // 1) Authenticate the caller
     let caller_id = ic_cdk::api::caller();
     if let Err(err) = auth::authenticate_caller(caller_id).await {
-        return json!({
-            "error": {
-                "code": "UNAUTHORIZED",
-                "message": err
-            }
-        })
-        .to_string();
+        return json!({ "error": { "code": "UNAUTHORIZED", "message": err } }).to_string();
     }
-
-    // 2) Attempt registration, then return a simple success or error JSON
     match registry::try_register_collection(canister_id).await {
         Ok(_) => json!({ "ok": "Collection registered successfully." }).to_string(),
-        Err(err_msg) => json!({
-            "error": {
-                "code": "REGISTER_COLLECTION_FAILED",
-                "message": err_msg
-            }
-        })
-        .to_string(),
+        Err(err_msg) => json!({ "error": { "code": "REGISTER_COLLECTION_FAILED", "message": err_msg } }).to_string(),
+    }
+}
+
+/// Controller-only update call to update an existing collection.
+/// This API first checks the caller's principal via the auth function,
+/// then retains the original registration timestamp and creates a new update timestamp.
+#[update]
+async fn update_collection(collection_id: u64, canister_id: Principal) -> String {
+    let caller_id = ic_cdk::api::caller();
+    if let Err(err) = auth::authenticate_caller(caller_id).await {
+        return json!({ "error": { "code": "UNAUTHORIZED", "message": err } }).to_string();
+    }
+    match registry::try_update_collection(collection_id, canister_id).await {
+        Ok(_) => json!({ "ok": "Collection updated successfully." }).to_string(),
+        Err(err_msg) => json!({ "error": { "code": "UPDATE_COLLECTION_FAILED", "message": err_msg } }).to_string(),
     }
 }
 
 /// Controller-only update call to unregister an existing collection.
-/// Now returns a simple JSON ack on success, rather than the entire state.
 #[update]
 async fn unregister_collection(collection_id: u64) -> String {
-    // 1) Authenticate the caller
     let caller_id = ic_cdk::api::caller();
     if let Err(err) = auth::authenticate_caller(caller_id).await {
-        return json!({
-            "error": {
-                "code": "UNAUTHORIZED",
-                "message": err
-            }
-        })
-        .to_string();
+        return json!({ "error": { "code": "UNAUTHORIZED", "message": err } }).to_string();
     }
-
-    // 2) Attempt unregistration, then return a simple success or error JSON
     match registry::try_unregister_collection(collection_id) {
         Ok(_) => json!({ "ok": "Collection unregistered successfully." }).to_string(),
-        Err(err_msg) => json!({
-            "error": {
-                "code": "UNREGISTER_COLLECTION_FAILED",
-                "message": err_msg
-            }
-        })
-        .to_string(),
+        Err(err_msg) => json!({ "error": { "code": "UNREGISTER_COLLECTION_FAILED", "message": err_msg } }).to_string(),
     }
 }
 
@@ -90,20 +73,20 @@ async fn unregister_collection(collection_id: u64) -> String {
 fn fetch_collections() -> String {
     match frontend_api::try_fetch_collections() {
         Ok(ids) => serde_json::to_string_pretty(&ids).unwrap_or_else(|e| {
-            json!({"error": {"code": "SERIALIZATION_ERROR", "message": e.to_string()}}).to_string()
+            json!({ "error": { "code": "SERIALIZATION_ERROR", "message": e.to_string() } }).to_string()
         }),
-        Err(e) => json!({"error": {"code": "FETCH_COLLECTIONS_FAILED", "message": e}}).to_string(),
+        Err(e) => json!({ "error": { "code": "FETCH_COLLECTIONS_FAILED", "message": e } }).to_string(),
     }
 }
 
-/// PUBLIC API CALL: Returns collection details (all fields except the graphics vector)
+/// PUBLIC API CALL: Returns collection details (excluding the graphics vector).
 #[query]
 fn fetch_collection(collection_id: u64) -> String {
     match frontend_api::try_fetch_collection(collection_id) {
         Ok(collection) => serde_json::to_string_pretty(&collection).unwrap_or_else(|e| {
-            json!({"error": {"code": "SERIALIZATION_ERROR", "message": e.to_string()}}).to_string()
+            json!({ "error": { "code": "SERIALIZATION_ERROR", "message": e.to_string() } }).to_string()
         }),
-        Err(e) => json!({"error": {"code": "FETCH_COLLECTION_FAILED", "message": e}}).to_string(),
+        Err(e) => json!({ "error": { "code": "FETCH_COLLECTION_FAILED", "message": e } }).to_string(),
     }
 }
 
@@ -112,9 +95,9 @@ fn fetch_collection(collection_id: u64) -> String {
 fn fetch_graphics(collection_id: u64) -> String {
     match frontend_api::try_fetch_graphics(collection_id) {
         Ok(graphics) => serde_json::to_string_pretty(&graphics).unwrap_or_else(|e| {
-            json!({"error": {"code": "SERIALIZATION_ERROR", "message": e.to_string()}}).to_string()
+            json!({ "error": { "code": "SERIALIZATION_ERROR", "message": e.to_string() } }).to_string()
         }),
-        Err(e) => json!({"error": {"code": "FETCH_GRAPHICS_FAILED", "message": e}}).to_string(),
+        Err(e) => json!({ "error": { "code": "FETCH_GRAPHICS_FAILED", "message": e } }).to_string(),
     }
 }
 
@@ -123,8 +106,9 @@ fn fetch_graphics(collection_id: u64) -> String {
 fn fetch_graphic(ogid: u64) -> String {
     match frontend_api::try_fetch_graphic(ogid) {
         Ok(graphic) => serde_json::to_string_pretty(&graphic).unwrap_or_else(|e| {
-            json!({"error": {"code": "SERIALIZATION_ERROR", "message": e.to_string()}}).to_string()
+            json!({ "error": { "code": "SERIALIZATION_ERROR", "message": e.to_string() } }).to_string()
         }),
-        Err(e) => json!({"error": {"code": "FETCH_GRAPHIC_FAILED", "message": e}}).to_string(),
+        Err(e) => json!({ "error": { "code": "FETCH_GRAPHIC_FAILED", "message": e } }).to_string(),
     }
 }
+
