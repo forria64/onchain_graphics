@@ -1,5 +1,5 @@
-<!-- File: src/og_frontend/src/App.vue -->
 <template>
+
   <div id="app">
     <Header />
     <router-view />
@@ -34,11 +34,11 @@ body {
 
 /* Hide scrollbars universally */
 * {
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none;  /* IE 10+ */
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
 *::-webkit-scrollbar {
-  display: none; /* Chrome, Safari, Opera */
+  display: none;
 }
 </style>
 

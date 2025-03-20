@@ -1,4 +1,3 @@
-<!-- File: src/og_frontend/src/components/Header.vue -->
 <template>
   <header class="header">
     <div class="header-left">
@@ -7,7 +6,8 @@
         <span class="brand">onchain.graphics</span>
       </router-link>
     </div>
-    <nav class="header-right">
+    <!-- Desktop navigation menu (hidden on mobile) -->
+    <nav class="header-right desktop-menu">
       <ul class="menu">
         <li class="menu-item">
           <router-link to="/about" class="menu-link">About</router-link>
@@ -23,12 +23,21 @@
         </li>
       </ul>
     </nav>
+    <!-- Mobile hamburger menu (visible only on mobile) -->
+    <div class="mobile-menu">
+      <HamburgerMenu />
+    </div>
   </header>
 </template>
 
 <script>
+import HamburgerMenu from './HamburgerMenu.vue';
+
 export default {
   name: 'Header',
+  components: {
+    HamburgerMenu,
+  },
 };
 </script>
 
@@ -38,13 +47,13 @@ export default {
   top: 0;
   left: 0;
   right: 0;
-  height: 80px; /* Adjust height as needed */
+  height: 80px;
   background-color: #faf8ff;
   display: flex;
   justify-content: space-between;
   align-items: center;
   padding: 0 1rem;
-  z-index: 2000;
+  z-index: 2000; /* Lower than the modal overlay's z-index */
 }
 
 .header-left {
@@ -69,35 +78,45 @@ export default {
   font-weight: bold;
 }
 
-.menu {
+/* Desktop menu styles */
+.desktop-menu .menu {
   list-style: none;
   display: flex;
   margin: 0;
   padding: 0;
 }
 
-.menu-item {
+.desktop-menu .menu-item {
   margin-left: 1rem;
 }
 
-.menu-link {
+.desktop-menu .menu-link {
   text-decoration: none;
   color: #afaca9;
   font-size: 1rem;
   transition: color 0.3s ease, background 0.3s ease;
 }
 
-/* Hover effect: animated gradient instead of underline */
-.menu-link:hover {
+.desktop-menu .menu-link:hover {
   color: transparent;
-  background: linear-gradient(90deg, #09f95a, #bab41c, #f9a207, #ff2217, #fa0e8c, #773ac9, #0861f2, #0aabaa);
+  background: linear-gradient(
+    90deg,
+    #09f95a,
+    #bab41c,
+    #f9a207,
+    #ff2217,
+    #fa0e8c,
+    #773ac9,
+    #0861f2,
+    #0aabaa
+  );
   background-clip: text;
   -webkit-background-clip: text;
   animation: gradientLoop 2s linear infinite alternate;
   background-size: 200% auto;
 }
 
-.menu-link.router-link-active {
+.desktop-menu .menu-link.router-link-active {
   color: #0b0a0a;
 }
 
@@ -107,6 +126,24 @@ export default {
   }
   100% {
     background-position: 100% center;
+  }
+}
+
+/* Hide mobile menu on desktop */
+.mobile-menu {
+  display: none;
+}
+
+/* Responsive adjustments for mobile (screens 768px and below) */
+@media (max-width: 768px) {
+  .brand {
+    font-size: 1.2rem;
+  }
+  .desktop-menu {
+    display: none;
+  }
+  .mobile-menu {
+    display: block;
   }
 }
 </style>

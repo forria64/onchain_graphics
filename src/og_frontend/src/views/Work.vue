@@ -201,7 +201,7 @@ export default {
 .sort-buttons button {
   background: transparent;
   border: none;
-  font-size: 0.9rem;
+  font-size: 1rem;
   cursor: pointer;
   color: #afaca9;
   transition: color 0.3s ease, background 0.3s ease;
@@ -502,6 +502,15 @@ export default {
 
 .work-title span {
   vertical-align: middle;
+}
+
+/* Mobile media query: work-title reduced to 1rem */
+@media (max-width: 768px) {
+  .work-title {
+    font-size: 1rem;
+  }
+  .sort-buttons button {
+  font-size: 1rem;}
 }
 </style>
 

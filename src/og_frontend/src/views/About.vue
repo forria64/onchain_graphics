@@ -1,4 +1,3 @@
-<!-- File: src/og_frontend/src/views/About.vue -->
 <template>
   <div class="about">
     <!-- Fixed header with page title -->
@@ -47,10 +46,19 @@ export default {
   padding: 1rem;
   z-index: 1100;
 }
+
+/* work-title font size adjusted for desktop */
 .work-title {
   font-size: 2rem;
   font-weight: bold;
   color: #000000;
+}
+
+/* Mobile media query: work-title reduced to 1rem */
+@media (max-width: 768px) {
+  .work-title {
+    font-size: 1rem;
+  }
 }
 
 /* Fixed gradient divider */

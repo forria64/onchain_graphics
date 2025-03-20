@@ -96,5 +96,12 @@ export default {
   text-transform: uppercase;
   letter-spacing: 2px;
 }
+
+/* Mobile media query: work-title reduced to 1rem */
+@media (max-width: 768px) {
+  .work-title {
+    font-size: 1rem;
+  }
+}
 </style>
 
